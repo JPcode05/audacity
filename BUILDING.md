@@ -63,7 +63,7 @@ $ sudo apt-get install libgtk2.0-dev libasound2-dev libavformat-dev libjack-jack
    For example, in the **git-bash** run:
 
     ```
-    $ git clone https://github.com/tenacityteam/tenacity.git
+    $ git clone https://github.com/tenacityteam/tenacity/
     ```
 
 2. Open CMake GUI. 
@@ -91,7 +91,7 @@ Generally, steps 1-5 are only needed the first-time you configure. Then, after y
 1. Clone Tenacity from the Tenacity GitHub project. 
   
     ```
-    $ git clone https://github.com/tenacityteam/tenacity.git
+    $ git clone https://github.com/tenacityteam/tenacity/
     ```
 
 2. Configure Tenacity using CMake:
@@ -100,11 +100,11 @@ Generally, steps 1-5 are only needed the first-time you configure. Then, after y
    $ cmake -GXcode -T buildsystem=1 ../tenacity
    ```
 
-3. Open Tenacity XCode project:
+3. Open the created XCode project:
    ```
-   $ open Tenacity.xcodeproj
+   $ open Audacity.xcodeproj
    ```
-   and build Tenacity using the IDE. 
+   and build using the XCode IDE. 
 
 Steps 1 and 2 are only required for first-time builds. 
 
@@ -121,7 +121,7 @@ cmake -GXCode -T buildsystem=1 -Daudacity_use_mad="off" -Daudacity_use_id3tag=of
 1. Clone Tenacity from the Tenacity GitHub project. 
   
     ```
-    $ git clone https://github.com/tenacityteam/tenacity.git
+    $ git clone https://github.com/tenacityteam/tenacity/
     ```
 
 2. Configure Tenacity using CMake:
@@ -141,7 +141,7 @@ cmake -GXCode -T buildsystem=1 -Daudacity_use_mad="off" -Daudacity_use_id3tag=of
    ```
    $ cd bin/Debug
    $ mkdir "Portable Settings"
-   $ ./tenacity
+   $ ./audacity
    ```
 
 5. Installing Tenacity
@@ -182,8 +182,8 @@ It is not advised to mix system and local libraries, except for the list above. 
 There is a [`Dockerfile`](linux/build-environment/Dockerfile) that can be used as an example of how to build Tenacity using system libraries: 
 
 ```
-$ docker build -t audacity_linux_env .\linux\build-environment\
-$ docker run --rm -v ${pwd}:/audacity/audacity/ -v ${pwd}/../build/linux-system:/audacity/build -it audacity_linux_env
+$ docker build -t tenacity_linux_env .\linux\build-environment\
+$ docker run --rm -v ${pwd}:/tenacity/tenacity/ -v ${pwd}/../build/linux-system:/tenacity/build -it tenacity_linux_env
 ```
 
 To find system packages, we rely on `pkg-config`. There are several packages that have broken `*.pc` or do not use `pkg-config` at all. For the docker image - we handle this issue by installing the correct [`pc` files](linux/build-environment/pkgconfig/).
