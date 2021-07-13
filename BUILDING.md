@@ -113,7 +113,7 @@ Alternatively, you can use **CLion**. If you chose to do so, open the directory 
 At the moment we only support **x86_64** builds. It is possible to build using AppleSilicon hardware but **mad** and **id3tag** should be disabled:
 
 ```
-cmake -GXCode -T buildsystem=1 -Daudacity_use_mad="off" -Daudacity_use_id3tag=off ../tenacity
+cmake -GXCode -T buildsystem=1 -Duse_mad="off" -Duse_id3tag=off ../tenacity
 ```
 
 ## Linux & Other OS
@@ -127,7 +127,7 @@ cmake -GXCode -T buildsystem=1 -Daudacity_use_mad="off" -Daudacity_use_id3tag=of
 2. Configure Tenacity using CMake:
    ```
    $ mkdir build && cd build
-   $ cmake -G "Unix Makefiles" -Daudacity_use_ffmpeg=loaded ../tenacity
+   $ cmake -G "Unix Makefiles" -Duse_ffmpeg=loaded ../tenacity
    ```
    By default, Debug build will be configured. To change that, pass `-DCMAKE_BUILD_TYPE=Release` to CMake.
 
@@ -144,11 +144,7 @@ cmake -GXCode -T buildsystem=1 -Daudacity_use_mad="off" -Daudacity_use_id3tag=of
    $ ./audacity
    ```
 
-5. Installing Tenacity
-   ```
-   $ cd <build directory>
-   $ sudo make install
-   ```
+At the moment, you are unable to install tenacity system-wide due conflits with libraries. You have to run Step 4 to use Tenacity. We are trying to fix that for the first stable release.
 
 ## Advanced
 
@@ -163,9 +159,9 @@ On Linux it is possible to build Tenacity using (almost) only the libraries prov
 ```
 $ mkdir build && cd build
 $ cmake -G "Unix Makefiles" \
-        -Daudacity_use_ffmpeg=loaded \
-        -Daudacity_lib_preference=system \
-        -Daudacity_obey_system_dependencies=On \
+        -Duse_ffmpeg=loaded \
+        -Dlib_preference=system \
+        -Dobey_system_dependencies=On \
          ../tenacity
 ```
 
