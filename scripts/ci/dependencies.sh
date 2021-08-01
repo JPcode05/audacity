@@ -6,11 +6,19 @@ set -euxo pipefail
 
 if [[ "${OSTYPE}" == msys* ]]; then # Windows
 
-    # Python packages
-    pip_packages=(
-        conan
-    )
-    pip3 install "${pip_packages[@]}"
+    if which choco; then
+
+        # Chocolatey packages
+        choco_packages=(
+            sccache
+            conan
+        )
+
+        choco install "${choco_packages[@]}" -y
+    else
+        echo >&2 "$0: Error: You don't have a recognized package manager installed."
+        exit 1
+    fi
 
 elif [[ "${OSTYPE}" == darwin* ]]; then # macOS
 
@@ -18,6 +26,7 @@ elif [[ "${OSTYPE}" == darwin* ]]; then # macOS
     brew_packages=(
         bash # macOS ships with Bash v3 for licensing reasons so upgrade it now
         conan
+        ccache
     )
     brew install "${brew_packages[@]}"
 
@@ -35,29 +44,23 @@ else # Linux & others
             g++
             git
             wget
+            bash
 
             # GitHub Actions
             libasound2-dev
             libgtk2.0-dev
             gettext
-            python3-pip
+            ccache
         )
         sudo apt-get update -y
         sudo apt-get install -y --no-install-recommends "${apt_packages[@]}"
-        sudo apt-get remove -y ccache
+
+        # Download Conan from github
+        wget "https://github.com/conan-io/conan/releases/latest/download/conan-ubuntu-64.deb" -nv -O /tmp/conan.deb
+        sudo dpkg -i /tmp/conan.deb
     else
         echo >&2 "$0: Error: You don't have a recognized package manager installed."
         exit 1
     fi
-
-    # Python packages
-    pip_packages=(
-        conan
-    )
-
-    which cmake || pip_packages+=( cmake ) # get latest CMake when inside Docker image
-
-    pip3 install wheel setuptools # need these first to install other packages (e.g. conan)
-    pip3 install "${pip_packages[@]}"
 
 fi

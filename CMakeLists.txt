@@ -8,7 +8,7 @@ cmake_minimum_required( VERSION 3.15 )
 # If building with GNU compiler, then must be 4.9 or later.
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND
     CMAKE_CXX_COMPILER_VERSION VERSION_LESS "4.9")
-   message(FATAL_ERROR "Audacity requires at least GCC 4.9")
+   message(FATAL_ERROR "Tenacity requires at least GCC 4.9")
 endif ()
 
 # We only do alpha builds, beta builds, and release versions.
@@ -98,10 +98,10 @@ endif()
 # Add our module path
 # CMAKE_BINARY_DIR is required for Conan to work
 set( AUDACITY_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake-proxies/cmake-modules")
-set( CMAKE_MODULE_PATH 
+set( CMAKE_MODULE_PATH
    ${AUDACITY_MODULE_PATH}
    ${CMAKE_BINARY_DIR}
-   ${CMAKE_MODULE_PATH} 
+   ${CMAKE_MODULE_PATH}
 )
 
 set( CMAKE_PREFIX_PATH
@@ -122,17 +122,30 @@ set( CMAKE_CXX_STANDARD_REQUIRED ON )
 find_program( CCACHE_PROGRAM ccache )
 mark_as_advanced( FORCE CCACHE_PROGRAM )
 
+find_program( SCCACHE_PROGRAM sccache )
+mark_as_advanced( FORCE SCCACHE_PROGRAM )
+
 if( CCACHE_PROGRAM )
-   set_property( GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}" )
+   message( STATUS "Found ccache: ${CCACHE_PROGRAM}" )
+   set( CMAKE_C_COMPILER_LAUNCHER "${CCACHE_PROGRAM}" )
+   set( CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}" )
+elseif( SCCACHE_PROGRAM )
+   message( STATUS "Found sccache: ${SCCACHE_PROGRAM}" )
+   set( CMAKE_C_COMPILER_LAUNCHER "${SCCACHE_PROGRAM}" )
+   set( CMAKE_CXX_COMPILER_LAUNCHER "${SCCACHE_PROGRAM}" )
+else()
+   message( STATUS "Could NOT find ccache nor sccache, no compiler caching enabled" )
 endif()
 
-# Audacity sets this `audacity_` to prefix all CMake options which is not needed and this is not Audacity.
-# Keep this CMake variable here instead of removing it from the rest of the CMake code to minimize merge
-# conflicts with Audacity.
-set( _OPT "" )
+include( CMakeDependentOption )
+
+# Test if conan is installed
+find_program(CONAN_CMD_TEST conan NO_CACHE)
+cmake_dependent_option(USE_CONAN "Build without conan" ON "NOT CONAN_CMD_TEST STREQUAL CONAN_CMD_TEST-NOTFOUND" OFF)
+message("Using conan: ${USE_CONAN}")
 
 # Our very own project
-project( Audacity )
+project( Tenacity )
 
 # Load our functions/macros
 include( AudacityFunctions )
@@ -161,11 +174,29 @@ include( CheckIncludeFiles )
 include( CheckLibraryExists )
 include( CheckSymbolExists )
 include( CheckTypeSize )
-include( CMakeDependentOption )
 include( CMakeDetermineASM_NASMCompiler )
 include( CMakePushCheckState )
 include( GNUInstallDirs )
 include( TestBigEndian )
+include( ProcessorCount )
+
+# Determine total number of processors to enable us to only use total_available - 1 processors
+# This helps prevent slow down of the other applications during the build process
+ProcessorCount( CMAKE_BUILD_CPU_COUNT )
+if( CMAKE_BUILD_CPU_COUNT GREATER 0 )
+  math( EXPR CMAKE_BUILD_CPU_COUNT "${CMAKE_BUILD_CPU_COUNT} - 2" OUTPUT_FORMAT DECIMAL )
+endif()
+
+if( CMAKE_BUILD_CPU_COUNT LESS_EQUAL 0 )
+  message( WARNING "Unable to optimize build CPU usage, defaulting to use all processors" )
+  set( CMAKE_BUILD_CPU_COUNT 0 )
+elseif(NOT DEFINED CMAKE_BUILD_PARALLEL_LEVEL )
+  message( STATUS "Build automatically optimized to use processor count: ${CMAKE_BUILD_CPU_COUNT}" )
+  set( CMAKE_BUILD_PARALLEL_LEVEL ${CMAKE_BUILD_CPU_COUNT} )
+#else()
+#  message( STATUS "Using CMAKE_BUILD_PARALLEL_LEVEL value to configure processor count: ${CMAKE_BUILD_PARALLEL_LEVEL}")
+#  set ( CMAKE_BUILD_CPU_COUNT ${CMAKE_BUILD_PARALLEL_LEVEL} )
+endif()
 
 # Determine 32-bit or 64-bit target
 if( CMAKE_C_COMPILER_ID MATCHES "MSVC" AND CMAKE_VS_PLATFORM_NAME MATCHES "Win64|x64" )
@@ -194,10 +225,10 @@ message( STATUS "  Compiler Standard Required: ${CMAKE_CXX_STANDARD_REQUIRED}" )
 message( STATUS "  Compiler Extensions: ${CMAKE_CXX_EXTENSIONS}" )
 message( STATUS )
 
-if( CMAKE_GENERATOR MATCHES "Visual Studio" )
+if( MSVC )
    message( STATUS "  MSVC Version: ${MSVC_VERSION}" )
    message( STATUS "  MSVC Toolset: ${MSVC_TOOLSET_VERSION}" )
-   message( STATUS ) 
+   message( STATUS )
 elseif( CMAKE_SYSTEM_NAME MATCHES "Darwin" )
    if( CMAKE_GENERATOR MATCHES "Xcode" )
       message( STATUS "  Xcode Version: ${XCODE_VERSION}" )
@@ -215,7 +246,7 @@ find_package( Git QUIET )
 if( GIT_FOUND )
    execute_process(
       COMMAND
-         ${GIT_EXECUTABLE} show -s "--format=%h;%H;%cd"
+         ${GIT_EXECUTABLE} show -s "--format=%h;%H;%cd" --no-show-signature --no-notes
       WORKING_DIRECTORY
          ${topdir}
       OUTPUT_VARIABLE
@@ -237,7 +268,7 @@ message( STATUS )
 set_property( GLOBAL PROPERTY USE_FOLDERS ON )
 
 if( CMAKE_GENERATOR MATCHES "Visual Studio" )
-   # Make sure Audacity is the startup project
+   # Make sure Tenacity is the startup project
    set_directory_properties(
       PROPERTIES
          VS_STARTUP_PROJECT "${CMAKE_PROJECT_NAME}"
@@ -246,8 +277,13 @@ if( CMAKE_GENERATOR MATCHES "Visual Studio" )
    # Build using multiple processors
    foreach( config ${CMAKE_CONFIGURATION_TYPES} )
       string( TOUPPER "${config}" config )
-      string( APPEND CMAKE_C_FLAGS_${config} " /MP" )
-      string( APPEND CMAKE_CXX_FLAGS_${config} " /MP" )
+      if( NOT CMAKE_BUILD_CPU_COUNT EQUAL 0 )
+        string( APPEND CMAKE_C_FLAGS_${config} " /MP${CMAKE_BUILD_CPU_COUNT}" )
+        string( APPEND CMAKE_CXX_FLAGS_${config} " /MP${CMAKE_BUILD_CPU_COUNT}" )
+      else()
+        string( APPEND CMAKE_C_FLAGS_${config} " /MP" )
+        string( APPEND CMAKE_CXX_FLAGS_${config} " /MP" )
+      endif()
    endforeach()
 
    # Define system library information, but we'll do the install
@@ -276,8 +312,8 @@ set( _DEST "${_DESTDIR}" )
 set( _PREFIX "${CMAKE_INSTALL_PREFIX}" )
 set( _LIBDIR "${CMAKE_INSTALL_LIBDIR}" )
 set( _DATADIR "${CMAKE_INSTALL_DATADIR}" )
-set( _PKGLIB "${_LIBDIR}/audacity" )
-set( _PKGDATA "${_DATADIR}/audacity/" )
+set( _PKGLIB "${_LIBDIR}/tenacity" )
+set( _PKGDATA "${_DATADIR}/tenacity/" )
 set( _MANDIR "${CMAKE_INSTALL_MANDIR}" )
 set( _MODDIR "${_DEST}/modules" )
 set( _EXEDIR "${_DEST}" )
@@ -290,7 +326,7 @@ set( CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE )
 
 # Adjust them for the Mac
 if( CMAKE_SYSTEM_NAME MATCHES "Darwin" )
-   set( _APPDIR "Audacity.app/Contents" )
+   set( _APPDIR "Tenacity.app/Contents" )
    set( _DEST "${_DESTDIR}/${_APPDIR}" )
    set( _EXEDIR "${_DEST}/MacOS" )
    set( _MODDIR "${_DEST}/modules" )
@@ -344,6 +380,18 @@ elseif( CMAKE_CXX_COMPILER_ID MATCHES "MSVC" )
    if( NOT IS_64BIT )
       set( SSE_FLAG "/arch:SSE2" )
    endif()
+
+   # required for sccache
+   if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+      string(REPLACE "/Zi" "/Z7" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+      string(REPLACE "/Zi" "/Z7" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
+    elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
+      string(REPLACE "/Zi" "/Z7" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
+      string(REPLACE "/Zi" "/Z7" CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
+    elseif(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+      string(REPLACE "/Zi" "/Z7" CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
+      string(REPLACE "/Zi" "/Z7" CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO}")
+    endif()
 endif()
 
 check_include_files( "float.h;stdarg.h;stdlib.h;string.h" STDC_HEADERS )
@@ -442,9 +490,9 @@ endif()
 
 # Define Audacity's name
 if( CMAKE_SYSTEM_NAME MATCHES "Darwin|Windows" )
-   set( AUDACITY_NAME "Audacity" )
+   set( AUDACITY_NAME "Tenacity" )
 else()
-   set( AUDACITY_NAME "audacity" )
+   set( AUDACITY_NAME "tenacity" )
 endif()
 
 # Create short and full version strings

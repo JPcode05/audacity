@@ -1,6 +1,6 @@
 /**********************************************************************
 
-  Audacity: A Digital Audio Editor
+  Tenacity
 
   ZoomInfo.h
 
@@ -26,7 +26,7 @@ class AudacityProject;
 enum : int {
    // Constants related to x coordinates in the track panel
    kBorderThickness = 1,
-   kShadowThickness = 1,
+   kShadowThickness = 0,
 
    kLeftInset = 4,
    kRightInset = kLeftInset,

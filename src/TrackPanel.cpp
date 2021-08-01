@@ -1,6 +1,6 @@
 /**********************************************************************
 
-  Audacity: A Digital Audio Editor
+  Tenacity
 
   TrackPanel.cpp
 
@@ -1270,7 +1270,68 @@ struct VRulersAndChannels final : TrackPanelGroup {
    wxCoord mLeftOffset;
 };
 
-// n channels with vertical rulers, alternating with n - 1 resizers;
+//Simply fills area using specified brush and outlines borders
+class EmptyPanelRect final : public CommonTrackPanelCell
+{
+   int mFillBrushName;
+public:
+   explicit EmptyPanelRect(int fillBrushName)
+      : mFillBrushName(fillBrushName)
+   {
+   }
+
+   ~EmptyPanelRect() { }
+
+   void Draw(TrackPanelDrawingContext& context, const wxRect& rect, unsigned iPass)
+   {
+      if (iPass == TrackArtist::PassBackground)
+      {
+         context.dc.SetPen(*wxTRANSPARENT_PEN);
+         AColor::UseThemeColour(&context.dc, mFillBrushName);
+         context.dc.DrawRectangle(rect);
+         wxRect bevel(rect.x, rect.y, rect.width - 1, rect.height - 1);
+         AColor::BevelTrackInfo(context.dc, true, bevel, false);
+         // Stroke the left border
+        context.dc.SetPen(*wxBLACK_PEN);
+        {
+           const auto left = rect.GetLeft();
+           AColor::Line( context.dc, left - 1, rect.GetTop(),
+               left - 1, rect.GetBottom() );
+        }
+      }
+   }
+
+   std::shared_ptr<Track> DoFindTrack() override
+   {
+       return {};
+   }
+
+   std::vector<UIHandlePtr> HitTest(const TrackPanelMouseState& state, const AudacityProject* pProject)
+   {
+      return {};
+   }
+};
+
+//Simply place children one after another horizontally, without any specific logic
+struct HorizontalGroup final : TrackPanelGroup {
+
+   Refinement mRefinement;
+
+   HorizontalGroup(Refinement refinement) 
+      : mRefinement(std::move(refinement)) 
+   { 
+   }
+
+   Subdivision Children(const wxRect& /*rect*/) override
+   {
+      return { Axis::X, mRefinement };
+   }
+
+};
+
+
+// optional affordance area, and n channels with vertical rulers,
+// alternating with n - 1 resizers;
 // each channel-ruler pair might be divided into multiple views
 struct ChannelGroup final : TrackPanelGroup {
    ChannelGroup( const std::shared_ptr< Track > &pTrack, wxCoord leftOffset )
@@ -1283,8 +1344,19 @@ struct ChannelGroup final : TrackPanelGroup {
       const auto channels = TrackList::Channels( mpTrack.get() );
       const auto pLast = *channels.rbegin();
       wxCoord yy = rect.GetTop();
-      for ( auto channel : channels ) {
+      for ( auto channel : channels ) 
+      {
          auto &view = TrackView::Get( *channel );
+         if (auto affordance = view.GetAffordanceControls())
+         {
+            Refinement hgroup {
+               std::make_pair(rect.GetLeft() + 1, std::make_shared<EmptyPanelRect>(channel->GetSelected() ? clrTrackInfoSelected : clrTrackInfo)),
+               std::make_pair(mLeftOffset, affordance)
+            };
+            refinement.emplace_back(yy, std::make_shared<HorizontalGroup>(hgroup));
+            yy += kAffordancesAreaHeight;
+         }
+
          auto height = view.GetHeight();
          rect.SetTop( yy );
          rect.SetHeight( height - kSeparatorThickness );
@@ -1325,28 +1397,6 @@ struct LabeledChannelGroup final : TrackPanelGroup {
    void Draw( TrackPanelDrawingContext &context,
       const wxRect &rect, unsigned iPass ) override
    {
-      if ( iPass == TrackArtist::PassBorders ) {
-         auto &dc = context.dc;
-         dc.SetBrush(*wxTRANSPARENT_BRUSH);
-         dc.SetPen(*wxBLACK_PEN);
-
-         // border
-         dc.DrawRectangle(
-            rect.x, rect.y,
-            rect.width - kShadowThickness, rect.height - kShadowThickness
-         );
-
-         // shadow
-         // Stroke lines along bottom and right, which are slightly short at
-         // bottom-left and top-right
-         const auto right = rect.GetRight();
-         const auto bottom = rect.GetBottom();
-
-         // bottom
-         AColor::Line(dc, rect.x + 2, bottom, right, bottom);
-         // right
-         AColor::Line(dc, right, rect.y + 2, right, bottom);
-      }
       if ( iPass == TrackArtist::PassFocus ) {
          // Sometimes highlight is not drawn on backing bitmap. I thought
          // it was because FindFocus did not return the TrackPanel on Mac, but
@@ -1444,6 +1494,9 @@ struct Subgroup final : TrackPanelGroup {
          for ( auto channel : TrackList::Channels( leader ) ) {
             auto &view = TrackView::Get( *channel );
             height += view.GetHeight();
+
+            if (view.GetAffordanceControls())
+               height += kAffordancesAreaHeight;
          }
          refinement.emplace_back( yy,
             std::make_shared< ResizingChannelGroup >(

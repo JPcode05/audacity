@@ -1,6 +1,6 @@
 /**********************************************************************
 
-  Audacity: A Digital Audio Editor
+  Tenacity
 
   Prefs.h
 
@@ -38,7 +38,8 @@
 
 #include <functional>
 
-#include "../include/audacity/ComponentInterface.h"
+#include "../include/tenacity/ComponentInterface.h"
+#include "ComponentInterfaceSymbol.h"
 #include "wxArrayStringEx.h"
 #include "widgets/FileConfig.h"
 

@@ -81,8 +81,8 @@ add_conan_lib(
    libmp3lame
    libmp3lame/3.100
    REQUIRED
+   FIND_PACKAGE
    INTERFACE_NAME libmp3lame::libmp3lame
-   PKG_CONFIG "lame >= 3.100"
 )
 
 add_conan_lib(
@@ -109,23 +109,14 @@ else()
    set ( curl_ssl "openssl" )
 endif ()
 
-add_conan_lib(
-   ThreadPool
-   threadpool/20140926
-   REQUIRED
-   ALWAYS_ALLOW_CONAN_FALLBACK
-)
 
-if( NOT CMAKE_SYSTEM_NAME MATCHES "Darwin|Windows")
-   add_conan_lib(
-      libuuid
-      libuuid/1.0.3
-      REQUIRED
-      OPTION_NAME uuid
-      PKG_CONFIG "uuid"
-      INTERFACE_NAME libuuid::libuuid
-   )
-endif()
+# TODO: is threadpool still needed?
+# add_conan_lib(
+#    ThreadPool
+#    threadpool/20140926
+#    REQUIRED
+#    ALWAYS_ALLOW_CONAN_FALLBACK
+# )
 
 add_conan_lib(
    RapidJSON
