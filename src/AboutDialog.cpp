@@ -176,7 +176,7 @@ void AboutDialog::CreateInformationTab(ShuttleGui& AboutDialogGUI) {
         << XO("The Build")
         << wxT("</h3>\n<table>"); // start build info table
 
-    AddBuildInfoRow(&informationStr, XO("Commit Id:"), BuildInfo::getRevisionIdentifier());
+    AddBuildInfoRow(&informationStr, XO("Version:"), BuildInfo::getRevisionIdentifier());
     AddBuildInfoRow(&informationStr, XO("Build type:"), BuildInfo::getBuildType());
     AddBuildInfoRow(&informationStr, XO("Compiler:"), BuildInfo::getCompilerVersionString());
 
@@ -228,9 +228,6 @@ void AboutDialog::CreateInformationTab(ShuttleGui& AboutDialogGUI) {
     #ifndef USE_FFMPEG
     #define USE_FFMPEG 0
     #endif
-    #ifndef USE_GSTREAMER
-    #define USE_GSTREAMER 0
-    #endif
     #ifndef USE_NYQUIST
     #define USE_NYQUIST 0
     #endif
@@ -266,7 +263,6 @@ void AboutDialog::CreateInformationTab(ShuttleGui& AboutDialogGUI) {
     const auto buildInfo_libtwolame = XO("MP2 export");
     const auto buildInfo_libquicktime = XO("Import via QuickTime");
     const auto buildInfo_libffmpeg = XO("FFmpeg Import/Export");
-    const auto buildInfo_libgstreamer = XO("Import via GStreamer");
     const auto buildInfo_pluginSupport = XO("Plug-in support");
     const auto buildInfo_soundCardMixerSupport = XO("Sound card mixer support");
     const auto buildInfo_pitchTempoSupport = XO("Pitch and Tempo Change support");
@@ -294,9 +290,6 @@ void AboutDialog::CreateInformationTab(ShuttleGui& AboutDialogGUI) {
     #endif
     #ifdef USE_FFMPEG
         AddBuildInfoRow(&informationStr, wxT("ffmpeg"), buildInfo_libffmpeg, USE_FFMPEG ? enabled : disabled);
-    #endif
-    #ifdef USE_GSTREAMER
-        AddBuildInfoRow(&informationStr, wxT("gstreamer"), buildInfo_libgstreamer, USE_GSTREAMER ? enabled : disabled);
     #endif
     informationStr << wxT("</table>\n");  //end table of file formats supported
 
@@ -862,15 +855,15 @@ void AboutDialog::GenerateTenacityPageDescription(wxTextOutputStream& tos) {
     #undef _
     #define _(s) wxGetTranslation((s))
         << wxT("<h3>DarkTenacity ")
-        << wxString(AUDACITY_VERSION_STRING)
+        << wxString(GIT_DESCRIBE)
         << wxT("</h3>")
         << wxT("Customised version of the free, open source, cross-platform audio recorder and editor Tenacity.")
 
     #else
         << XO("<h3>")
         << ProgramName
-        // << wxT(" ")
-        // << wxString(AUDACITY_VERSION_STRING)
+        << wxT(" ")
+        << wxString(GIT_DESCRIBE)
         << wxT("</h3>")
         /* i18n-hint: The program's name substitutes for %s */
         << XO("Free, open source, cross-platform audio recorder and editor.")
