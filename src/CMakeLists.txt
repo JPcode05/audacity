@@ -755,8 +755,6 @@ list( APPEND SOURCES
       toolbars/EditToolBar.h
       toolbars/MeterToolBar.cpp
       toolbars/MeterToolBar.h
-      toolbars/MixerToolBar.cpp
-      toolbars/MixerToolBar.h
       toolbars/ScrubbingToolBar.cpp
       toolbars/ScrubbingToolBar.h
       toolbars/SelectionBar.cpp
@@ -1027,7 +1025,6 @@ list( APPEND RESOURCES
 #
 list( APPEND DEFINES
    PRIVATE
-      BUILDING_AUDACITY
       CMAKE
       $<$<BOOL:${HAVE_LRINT}>:
          HAVE_LRINT
@@ -1092,7 +1089,6 @@ list( APPEND LIBRARIES
       $<$<BOOL:${USE_MIDI}>:PortMidi::PortMidi>
       $<$<BOOL:${USE_MIDI}>:PortSMF::PortSMF>
       libnyquist
-      $<$<BOOL:${USE_PORTMIXER}>:portmixer>
       $<$<BOOL:${USE_SBSMS}>:sbsms::sbsms>
       $<$<BOOL:${USE_SOUNDTOUCH}>:SoundTouch::SoundTouch>
       $<$<BOOL:${USE_VAMP}>:VampHostSDK::VampHostSDK>
@@ -1101,7 +1097,6 @@ list( APPEND LIBRARIES
       $<$<PLATFORM_ID:Linux,FreeBSD,OpenBSD,NetBSD,CYGWIN>:Threads::Threads>
 )
 
-set( BUILDING_AUDACITY YES )
 set( INSTALL_PREFIX "${_PREFIX}" )
 set( PKGLIBDIR "${_PKGLIBDIR}" )
 set( LIBDIR "${CMAKE_INSTALL_FULL_LIBDIR}" )
@@ -1181,13 +1176,13 @@ elseif( CMAKE_SYSTEM_NAME MATCHES "Darwin" )
    # Define Mac specific resources
    #TODO Remove Audacity from Mac resources
    list( APPEND MAC_RESOURCES
-      ../mac/Resources/Audacity.icns
-      ../mac/Resources/AudacityAIFF.icns
-      ../mac/Resources/AudacityAU.icns
-      ../mac/Resources/AudacityMP3.icns
-      ../mac/Resources/AudacityOGG.icns
-      ../mac/Resources/AudacityProject.icns
-      ../mac/Resources/AudacityWAV.icns
+      ../mac/Resources/Tenacity.icns
+      ../mac/Resources/TenacityAIFF.icns
+      ../mac/Resources/TenacityAU.icns
+      ../mac/Resources/TenacityMP3.icns
+      ../mac/Resources/TenacityOGG.icns
+      ../mac/Resources/TenacityProject.icns
+      ../mac/Resources/TenacityWAV.icns
    )
 
    set_target_properties(
@@ -1336,9 +1331,9 @@ source_group(
         ${_INTDIR}/CMakeFiles/Tenacity.dir/cmake_pch.hxx
 )
 
-# Define AUDACITY_DLL_API
-import_symbol_define( import_symbol AUDACITY_DLL )
-export_symbol_define( export_symbol AUDACITY_DLL )
+# Define TENACITY_DLL_API
+import_symbol_define( import_symbol TENACITY_DLL )
+export_symbol_define( export_symbol TENACITY_DLL )
 list( APPEND DEFINES PRIVATE "${export_symbol}" INTERFACE "${import_symbol}" )
 
 target_sources( ${TARGET} PRIVATE ${HEADERS} ${SOURCES} ${RESOURCES} ${MAC_RESOURCES} ${WIN_RESOURCES} )

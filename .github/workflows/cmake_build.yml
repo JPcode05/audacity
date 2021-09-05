@@ -5,6 +5,7 @@ on:
     branches:
       - master
   pull_request:
+  workflow_dispatch:
 
 defaults:
   run:
@@ -73,6 +74,7 @@ jobs:
 
       VCPKG_DISABLE_METRICS: true
       VCPKG_DEFAULT_TRIPLET: ${{ matrix.config.vcpkg_triplet }}
+      VCPKG_BINARY_SOURCES: "clear;default,readwrite;nuget,https://tenacityteam.jfrog.io/artifactory/api/nuget/tenacity-nuget,readwrite"
 
       # Windows codesigning
       # This variables will be used by all the steps
@@ -88,13 +90,67 @@ jobs:
       with:
         submodules: true
 
-    - name: Install dependencies
+    - name: Install Nuget
+      uses: nuget/setup-nuget@v1
+      with:
+        # Nuget versions needs to be the same version that vcpkg expects
+        # So update them in parallel
+        nuget-version: 5.10.0
+
+    - name: Authenticate CI to Artifactory
+      if: github.event_name == 'push' && github.repository_owner == 'tenacityteam'
       run: |
-        exec bash "scripts/ci/dependencies.sh"
+        nuget sources Add -Name Artifactory -Source https://tenacityteam.jfrog.io/artifactory/api/nuget/tenacity-nuget -username ${JFROG_ARTIFACTORY_NUGET_USER} -password ${JFROG_ARTIFACTORY_NUGET_PASS} -ForceEnglishOutput -NonInteractive
+        nuget setapikey ${JFROG_ARTIFACTORY_NUGET_USER}:${JFROG_ARTIFACTORY_NUGET_TOKEN} -Source Artifactory -ForceEnglishOutput -NonInteractive
+      env:
+        JFROG_ARTIFACTORY_NUGET_USER: ${{secrets.JFROG_ARTIFACTORY_NUGET_USER}}
+        JFROG_ARTIFACTORY_NUGET_PASS: ${{secrets.JFROG_ARTIFACTORY_NUGET_PASS}}
+        JFROG_ARTIFACTORY_NUGET_TOKEN: ${{secrets.JFROG_ARTIFACTORY_NUGET_TOKEN}}
+
+    - name: "[Linux] Install dependencies"
+      if: runner.os == 'Linux'
+      run: >-
+        sudo apt-get update &&
+        sudo apt-get install -y --no-install-recommends
+        file
+        g++
+        ninja-build 
+        nasm 
+        git 
+        wget
+        bash
+        scdoc
+        ccache
+        debhelper-compat
+        gettext
+        libasound2-dev
+        libgtk-3-dev
+        libsuil-dev
+        gettext
+
+    - name: "[MacOS] Install dependencies"
+      if: runner.os == 'macOS'
+      run: >-
+        brew install
+        bash
+        ccache
+        ninja
+        nasm
+
+    - name: "[Windows] Install dependencies"
+      if: runner.os == 'Windows'
+      shell: pwsh
+      env:
+        # Install path of scoop
+        SCOOP: C:\Scoop\
+      run: |
+        echo "C:\Scoop\shims" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        iwr -useb get.scoop.sh | iex
+        scoop install sccache
 
     - name: Install Apple codesigning certificates
       uses: apple-actions/import-codesign-certs@v1
-      if: startswith( matrix.config.os, 'macos' ) && github.event_name == 'push' && github.repository_owner == 'audacity'
+      if: startswith( matrix.config.os, 'macos' ) && github.repository_owner == 'tenacityteam' && github.event_name == 'create' && github.event.ref_type == 'tag'
       with:
         p12-file-base64: ${{ secrets.APPLE_CERTIFICATE }}
         p12-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -216,8 +272,9 @@ jobs:
         if-no-files-found: error
 
     - name: Upload artifact of vcpkg build logs
-      if: always()
       uses: actions/upload-artifact@v2
+      if: always()
       with:
         name: vcpkg-logs-${{ runner.os }}
         path: ${{ github.workspace }}/vcpkg/buildtrees/**/*.log
+        if-no-files-found: ignore
