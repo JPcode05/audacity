@@ -4,9 +4,7 @@
   "runtime-version": "40",
   "sdk": "org.gnome.Sdk",
   "command": "tenacity",
-  "rename-desktop-file": "tenacity.desktop",
   "rename-icon": "tenacity",
-  "rename-appdata-file": "tenacity.metainfo.xml",
   "finish-args": [
     "--share=ipc",
     "--socket=x11",
@@ -164,9 +162,9 @@
       "sources": [
         {
           "type": "git",
-          "url": "https://gitlab.com/soundtouch/soundtouch.git",
-          "tag": "2.3.0",
-          "commit": "c65afe49f697fcea87d9a134870c8d115d7700cc"
+          "url": "https://codeberg.org/soundtouch/soundtouch.git",
+          "tag": "2.3.1",
+          "commit": "e1f315f5358d9db5cee35a7a2886425489fcefe8"
         }
       ]
     },
@@ -189,7 +187,7 @@
         "-DWX_CONFIG=/app/bin/wx-config"
       ],
       "post-install": [
-        "install -Dm644 ../help/tenacity.metainfo.xml -t /app/share/metainfo",
+        "install -Dm644 ../help/org.tenacityaudio.Tenacity.metainfo.xml -t /app/share/metainfo",
         "install -d /app/extensions/Plugins"
       ],
       "cleanup": [
@@ -209,7 +207,7 @@
         {
           "type": "shell",
           "commands": [
-            "sed -e '43i <release version=\"master\" date=\"2021-08-12\"/>' -i help/tenacity.metainfo.xml"
+            "sed -e '43i <release version=\"master\" date=\"2021-08-12\"/>' -i help/org.tenacityaudio.Tenacity.metainfo.xml"
           ]
         }
       ]

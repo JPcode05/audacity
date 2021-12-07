@@ -57,10 +57,6 @@ endif()
 cmd_option( use_ladspa "Use LADSPA plug-in support [ON, OFF]" ON )
 set( USE_LADSPA ${use_ladspa} CACHE INTERNAL "" )
 
-# Handle VST option
-cmd_option( use_vst "Use VST2 plug-in support [ON, OFF]" ON )
-set( USE_VST ${use_vst} CACHE INTERNAL "" )
-
 # ~~~
 # General source files
 # ~~~
@@ -302,6 +298,7 @@ list( APPEND SOURCES PRIVATE
   TrackPanelAx.h
   TrackPanelCell.cpp
   TrackPanelCell.h
+  TrackPanelConstants.h
   TrackPanelDrawable.cpp
   TrackPanelDrawable.h
   TrackPanelDrawingContext.h
@@ -436,6 +433,8 @@ list( APPEND SOURCES PRIVATE
   effects/ClickRemoval.h
   effects/Compressor.cpp
   effects/Compressor.h
+  effects/Compressor2.cpp
+  effects/Compressor2.h
   effects/Contrast.cpp
   effects/Contrast.h
   effects/Distortion.cpp
@@ -951,6 +950,8 @@ list( APPEND SOURCES PRIVATE
   widgets/Overlay.h
   widgets/OverlayPanel.cpp
   widgets/OverlayPanel.h
+  widgets/Plot.cpp
+  widgets/Plot.h
   widgets/PopupMenuTable.cpp
   widgets/PopupMenuTable.h
   widgets/ProgressDialog.cpp
@@ -958,6 +959,8 @@ list( APPEND SOURCES PRIVATE
   widgets/ReadOnlyText.h
   widgets/Ruler.cpp
   widgets/Ruler.h
+  widgets/SliderTextCtrl.cpp
+  widgets/SliderTextCtrl.h
   widgets/UnwritableLocationErrorDialog.cpp
   widgets/UnwritableLocationErrorDialog.h
   widgets/Warning.cpp
@@ -1191,7 +1194,7 @@ elseif( CMAKE_SYSTEM_NAME MATCHES "Darwin" )
   add_custom_command(
     TARGET ${TARGET}
     COMMAND ${CMAKE_COMMAND}
-      -D SRC="${_EXEDIR}/${AUDACITY_NAME}Z"
+      -D SRC="${_EXEDIR}/${AUDACITY_NAME}"
       -D DST="${_PKGLIB}"
       -D WXWIN="${_SHARED_PROXY_BASE_PATH}/$<CONFIG>"
       -P "${AUDACITY_MODULE_PATH}/CopyLibs.cmake"
@@ -1267,7 +1270,7 @@ else()
   endif()
 
   # Create the desktop file
-  configure_file( tenacity.desktop.in ${_INTDIR}/tenacity.desktop )
+  configure_file( org.tenacityaudio.Tenacity.desktop.in ${_INTDIR}/org.tenacityaudio.Tenacity.desktop )
 
   # Copy the required wxWidgets libs into the bundle
   add_custom_command(
@@ -1349,6 +1352,13 @@ else()
       DESTINATION "."
       RESOURCE DESTINATION "${_APPDIR}/Resources"
     )
+
+    set_target_properties(${TARGET} PROPERTIES
+        MACOSX_BUNDLE true
+    )
+    install(CODE "
+        include(BundleUtilities)
+        fixup_bundle( \${CMAKE_INSTALL_PREFIX}/Tenacity.app \"\" \"${CMAKE_PREFIX_PATH}/lib\" )")
   elseif( WIN32 )
     install(
       DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/"
@@ -1366,7 +1376,7 @@ else()
       PATTERN "*.so*"
     )
     install(
-      FILES "${_INTDIR}/tenacity.desktop"
+      FILES "${_INTDIR}/org.tenacityaudio.Tenacity.desktop"
       DESTINATION "${_DATADIR}/applications"
     )
     install(
@@ -1374,7 +1384,7 @@ else()
       DESTINATION "${_DATADIR}/doc/${AUDACITY_NAME}"
     )
     install(
-      FILES "${_SRCDIR}/tenacity.xml"
+      FILES "${_SRCDIR}/org.tenacityaudio.Tenacity.xml"
       DESTINATION "${_DATADIR}/mime/packages"
     )
     install(

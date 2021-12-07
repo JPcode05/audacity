@@ -5,8 +5,12 @@
 ### Linux
 
 Most distributions do not package all of Tenacity's dependencies (yet).
-wxWidgets 3.1 is required for building Tenacity but many distributions only
-package wxWidgets 3.0. [PortMidi](https://github.com/mixxxdj/portmidi) and
+wxWidgets 3.1 is suggested for building Tenacity but many distributions only
+package wxWidgets 3.0. When 3.0 is used instead of 3.1, the main user visible
+known drawback is that a few user interface texts will not be localized, and
+the effects of not having various wxWidgets bug fixes that have not been
+backported to the stable 3.0 series.
+[PortMidi](https://github.com/mixxxdj/portmidi) and
 [PortSMF](https://github.com/tenacityteam/portsmf) are required for MIDI support
 but some distributions do not package PortSMF (Tenacity can still build without
 MIDI support). [libsbsms](https://github.com/claytonotey/libsbsms) is an
@@ -64,7 +68,7 @@ to the CMake configuration step.
 package called `libjack0`, you may need to install `libjack-jack2-dev` instead
 of `libjack-dev`.
 
-- wxWidgets 3.1 is required but not packaged in Debian or Ubuntu. Refer
+- wxWidgets 3.1 is suggested but not packaged in Debian or Ubuntu. Refer
 to the
 [wxWidgets documentation](https://docs.wxwidgets.org/3.1/overview_cmake.html)
 for how to install it from source code, or see the [previous section](#wxwidgets-from-source). The above package list
@@ -76,6 +80,12 @@ example, if you installed wxWidgets to /home/user/local:
 
 ```
 export WX_CONFIG=/home/user/local/bin/wx-config
+```
+
+- Alternatively, you may skip installing wxWidgets 3.1 and use 3.0 instead:
+
+```
+sudo apt-get install libwxgtk3.0-dev
 ```
 
 #### Fedora
@@ -114,7 +124,8 @@ export WX_CONFIG=/home/user/local/bin/wx-config
 
 #### Arch
 
-Install `wxgtk3-dev-light` with your AUR helper of choice, for example:
+To use wxWidgets 3.1, install `wxgtk3-dev-light` with your AUR helper of
+choice, for example:
 
 ```
 paru -S wxgtk3-dev-light
@@ -126,6 +137,9 @@ this AUR package:
 ```
 export WX_CONFIG=/usr/bin/wx-config-gtk3-3.1
 ```
+
+Alternatively, install `wxgtk3` with pacman to use wxWidgets 3.0, and set
+`WX_CONFIG=/usr/bin/wx-config-gtk3`.
 
 Install the rest of the build dependencies from the main Arch repository:
 
@@ -144,7 +158,7 @@ community repository:
 sudo apk add cmake samurai lame-dev libsndfile-dev soxr-dev sqlite-dev portaudio-dev portmidi-dev libid3tag-dev soundtouch-dev libmad-dev ffmpeg-dev
 ```
 
-wxWidgets 3.1 is required but not packaged in Alpine Linux. Refer to the
+wxWidgets 3.1 is suggested but not packaged in Alpine Linux. Refer to the
 [wxWidgets documentation](https://github.com/wxWidgets/wxWidgets/blob/master/docs/gtk/install.md)
 for how to install it from source code, and make sure to set
 `--disable-xlocale` in the configuration.
@@ -154,6 +168,9 @@ To install wxWidgets' dependencies:
 ```
 sudo apk add gtk+3.0-dev zlib-dev libpng-dev tiff-dev libjpeg-turbo-dev expat-dev
 ```
+
+Alternatively, install `wxgtk3-dev` with apk to use wxWidgets 3.0, and set
+`WX_CONFIG=/usr/bin/wx-config-gtk3`.
 
 TODO: add portsmf and libsbsms to this package list when aports are accepted.
 
@@ -234,7 +251,14 @@ You will also need to install a few build tools and dependencies, which can be
 installed from [Homebrew](https://brew.sh/):
 
 ```
-brew install cmake ccache ninja nasm wxwidgets
+brew install cmake ccache ninja nasm mono wxwidgets
+```
+
+You must set the `WX_CONFIG` environment variable for CMake to find wxWidgets
+installed from Homebrew:
+
+```
+export WX_CONFIG=/usr/local/bin/wx-config
 ```
 
 The rest of the dependencies will be built automatically with vcpkg when
@@ -316,5 +340,5 @@ has outdated libraries that do not build with Tenacity.
   * **VAMP** (ON|OFF): VAMP plugin hosting support. Requires VAMP host SDK.
   * **LV2** (ON|OFF): LV2 plugin hosting support. Requires LV2, lilv, and
     suil libraries.
-  * **VST2** (ON|OFF): VST2 plugin hosting support. No libraries are required.
-    ON by default.
+  * **VST2** (ON|OFF): VST2 plugin hosting support. Requires GTK with X11
+    support on non-Apple/Windows.

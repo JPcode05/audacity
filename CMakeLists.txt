@@ -50,33 +50,60 @@ if(NOT GIT_FOUND)
   find_package( Git )
 endif()
 
-set( AUDACITY_VERSION 0 ) # Major version
+# ~~~~~~~~~
+#  Version
+# ~~~~~~~~~
+
+# Audacity version that Tenacity is based on
+set( AUDACITY_VERSION 3 ) # Major version
 set( AUDACITY_RELEASE 0 ) # Minor version
-set( AUDACITY_REVISION 0 ) # Revision version
+set( AUDACITY_REVISION 4 ) # Revision version
 set( AUDACITY_MODLEVEL 0 ) # Additional version detail
+
+# Tenacity's version
+set( TENACITY_VERSION 0 ) # Major version
+set( TENACITY_RELEASE 1 ) # Minor version
+set( TENACITY_REVISION 0 ) # Revision version
+set( TENACITY_MODLEVEL 0 ) # Additional version detail
 set( GIT_DESCRIBE "unknown" )
 
 if( GIT_FOUND )
+  # Attempt to first get "Tenacity-" tags
   execute_process(
-    COMMAND ${GIT_EXECUTABLE} describe --abbrev=7
+    COMMAND ${GIT_EXECUTABLE} describe --tags --abbrev=7 --exclude="Audacity-*" --exclude="DarkAudacity-*"
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     OUTPUT_VARIABLE GIT_DESCRIBE
     OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET
   )
 
-  if( GIT_DESCRIBE )
+  if( DEFINED GIT_DESCRIBE AND GIT_DESCRIBE STREQUAL "" )
+    # Retry, this time accepting "Audacity-" tags
+    execute_process(
+      COMMAND ${GIT_EXECUTABLE} describe --tags --abbrev=7 --exclude="DarkAudacity-*"
+      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+      OUTPUT_VARIABLE GIT_DESCRIBE
+      OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET
+    )
+  endif()
+
+  if( DEFINED GIT_DESCRIBE AND NOT GIT_DESCRIBE STREQUAL "" )
+
     # Copy to new variable for string manipulation
     set( git_output ${GIT_DESCRIBE} )
 
-    # TODO: Remove this after first Tenacity release
     string( REPLACE "Audacity-" "" git_output "${git_output}" )
+    string( REPLACE "DarkAudacity-" "" git_output "${git_output}" )
 
     string( REGEX REPLACE "-.*" "" git_output "${git_output}" )
     string( REPLACE "." ";" git_output "${git_output}" )
 
-    list( GET git_output 0 AUDACITY_VERSION )
-    list( GET git_output 1 AUDACITY_RELEASE )
-    list( GET git_output 2 AUDACITY_REVISION )
+    list( LENGTH git_output GIT_OUTPUT_LIST_LENGTH )
+
+    if( GIT_OUTPUT_LIST_LENGTH GREATER_EQUAL 3 )
+      list( GET git_output 0 AUDACITY_VERSION )
+      list( GET git_output 1 AUDACITY_RELEASE )
+      list( GET git_output 2 AUDACITY_REVISION )
+    endif()
   endif()
 endif()
 
@@ -94,7 +121,7 @@ if( VCPKG )
   set( ENV{VCPKG_DISABLE_METRICS} true )
 
   if( NOT DEFINED ENV{VCPKG_BINARY_SOURCES} )
-    set( ENV{VCPKG_BINARY_SOURCES} "clear;default,readwrite;nuget,https://tenacityteam.jfrog.io/artifactory/api/nuget/tenacity-nuget,read" )
+    set( ENV{VCPKG_BINARY_SOURCES} "clear;default;nuget,tenacityteam_github_auto,read;" )
   endif()
 
   set( ENV{VCPKG_FEATURE_FLAGS} "-compilertracking,manifests,registries,versions" )
@@ -131,6 +158,36 @@ if( VCPKG )
         message( FATAL_ERROR "Unable to initialize vcpkg Git submodule because CMake was unable to find a git installation" )
       endif()
     endif()
+  endif()
+
+  if( NOT DEFINED ENV{CI} AND NOT EXISTS ${CMAKE_SOURCE_DIR}/nuget.config AND (EXISTS ${VCPKG_ROOT}/vcpkg OR EXISTS ${VCPKG_ROOT}/vcpkg.exe) )
+
+    execute_process(
+      COMMAND vcpkg fetch nuget
+      WORKING_DIRECTORY ${VCPKG_ROOT}
+      OUTPUT_VARIABLE NUGET_EXECUTABLE
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+
+    message( STATUS "Automatically setting Nuget api key to allow nuget cache usage locally" )
+
+    file( READ ${CMAKE_SOURCE_DIR}/nuget.config.in NUGET_CONFIG_CONTENT )
+    file( WRITE ${CMAKE_SOURCE_DIR}/nuget.config ${NUGET_CONFIG_CONTENT} )
+
+    set( GITHUB_PACKAGES_TOKEN_SUFFIX "ZdXoXftxDTV20UjAmIL2Mw95kckhbo0hmiYz" )
+
+    execute_process(
+      COMMAND "${NUGET_EXECUTABLE}" sources add -Name tenacityteam_github_auto -Source https://nuget.pkg.github.com/tenacityteam/index.json -Config nuget.config -Username tenacityteamci  -Password ghp_${GITHUB_PACKAGES_TOKEN_SUFFIX} -StorePasswordInClearText -ForceEnglishOutput -NonInteractive
+      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+
+    execute_process(
+      COMMAND "${NUGET_EXECUTABLE}" setapikey -Source tenacityteam_github_auto -Config nuget.config ghp_${GITHUB_PACKAGES_TOKEN_SUFFIX}
+      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+      OUTPUT_VARIABLE SETAPI_KEY_RESULT
+      ERROR_VARIABLE SETAPI_KEY_RESULT
+    )
+
   endif()
 
   if( NOT DEFINED VCPKG_OVERLAY_PORTS )
@@ -788,24 +845,33 @@ else()
   message( STATUS "LV2 plugin hosting disabled. Requires LV2, lilv, and suil libraries." )
 endif()
 
-option( VST2 "VST2 plugin host support" ON )
-if( VST2 )
-  message( STATUS "VST2 plugin host support enabled." )
-else()
-  message( STATUS "VST2 plugin host support disabled." )
-endif()
-
 if( NOT CMAKE_SYSTEM_NAME MATCHES "Darwin|Windows" )
   find_package( GLIB REQUIRED )
   find_package( GTK 3.0 REQUIRED )
+  pkg_check_modules(GDK3_X11 gdk-x11-3.0)
 endif()
 
+if( NOT CMAKE_SYSTEM_NAME MATCHES "Darwin|Windows" )
+  cmake_dependent_option( VST2 "Use VST2 plug-in support [ON, OFF]" ON "GDK3_X11_FOUND" OFF)
+else()
+  option( VST2 "Use VST2 plug-in support" ON)
+endif()
+set(USE_VST ${VST2} CACHE INTERNAL "")
+
 if( NOT WIN32 )
-  set( wxWidgets_CONFIG_OPTIONS --version=3.1 )
+  # wxWidgets 3.1 can be explicitly selected if both 3.0 and 3.1 are installed by setting
+  # the WX_CONFIG environment variable to path of the wx-config script for 3.1.
   find_package(
-    wxWidgets 3.1
+    wxWidgets 3.0
     COMPONENTS adv base core html qa xml net
   )
+
+  if(NOT wxWidgets_FOUND)
+    message(FATAL_ERROR "wxWidgets NOT found. "
+      "Install wxWidgets and its development headers and try again. "
+      "If wxWidgets is installed, set the WX_CONFIG environment variable to the path of the wx-config script.")
+  endif()
+
   include( ${wxWidgets_USE_FILE} )
   # The FindwxWidgets.cmake module does not create an IMPORT target, so hack one together. This makes it easy to add the compile definitions
   # to the lib-strings and lib-strings-utils targets.
