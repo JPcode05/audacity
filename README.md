@@ -1,3 +1,9 @@
+# THIS REPOSITORY HAS BEEN ARCHIVED
+
+You can find the new one [here](https://github.com/JPcode05/tenacity).
+
+# Original README
+
 [![Tenacity](https://raw.githubusercontent.com/tenacityteam/assets/master/PNG/tenacity-logo-dark-readme.png)](https://tenacityaudio.org)
 
 [![Chat on IRC](https://badgen.net/badge/irc/%23tenacity/green)](https://web.libera.chat/gamja/?channels=#tenacity)
